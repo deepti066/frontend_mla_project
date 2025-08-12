@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:icons_plus/icons_plus.dart';
+import 'package:login_signup/screens/admin_page.dart';
 import 'package:login_signup/screens/signup_screen.dart';
 import 'package:login_signup/widgets/custom_scaffold.dart';
+import 'package:login_signup/screens/home_page.dart';
+import 'package:login_signup/screens/admin_page.dart';
 
 import '../theme/theme.dart';
 
@@ -55,12 +58,12 @@ class _SignInScreenState extends State<SignInScreen> {
                         height: 40.0,
                       ),
                       TextFormField(
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter Email';
-                          }
-                          return null;
-                        },
+                        // validator: (value) {
+                        //   if (value == null || value.isEmpty) {
+                        //     return 'Please enter Email';
+                        //   }
+                        //   return null;
+                        // },
                         decoration: InputDecoration(
                           label: const Text('Email'),
                           hintText: 'Enter Email',
@@ -85,14 +88,14 @@ class _SignInScreenState extends State<SignInScreen> {
                         height: 25.0,
                       ),
                       TextFormField(
-                        obscureText: true,
-                        obscuringCharacter: '*',
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter Password';
-                          }
-                          return null;
-                        },
+                        // obscureText: true,
+                        // obscuringCharacter: '*',
+                        // validator: (value) {
+                        //   if (value == null || value.isEmpty) {
+                        //     return 'Please enter Password';
+                        //   }
+                        //   return null;
+                        // },
                         decoration: InputDecoration(
                           label: const Text('Password'),
                           hintText: 'Enter Password',
@@ -156,71 +159,93 @@ class _SignInScreenState extends State<SignInScreen> {
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: () {
-                            if (_formSignInKey.currentState!.validate() &&
-                                rememberPassword) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Processing Data'),
-                                ),
+                            if (_formSignInKey.currentState!.validate() && rememberPassword) {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(builder: (context) => HomePage()),
                               );
                             } else if (!rememberPassword) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                    content: Text(
-                                        'Please agree to the processing of personal data')),
+                                  content: Text('Please agree to the processing of personal data'),
+                                ),
                               );
                             }
                           },
-                          child: const Text('Sign up'),
+                          child: const Text('Sign in'),
                         ),
                       ),
                       const SizedBox(
                         height: 25.0,
                       ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            child: Divider(
-                              thickness: 0.7,
-                              color: Colors.grey.withOpacity(0.5),
-                            ),
-                          ),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(
-                              vertical: 0,
-                              horizontal: 10,
-                            ),
-                            child: Text(
-                              'Sign up with',
-                              style: TextStyle(
-                                color: Colors.black45,
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Divider(
-                              thickness: 0.7,
-                              color: Colors.grey.withOpacity(0.5),
-                            ),
-                          ),
-                        ],
+                      // Admin Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (_formSignInKey.currentState!.validate() && rememberPassword) {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(builder: (context) =>const AdminPage()),
+                              );
+                            } else if (!rememberPassword) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Please agree to the processing of personal data'),
+                                ),
+                              );
+                            }
+                          },
+                          child: const Text('Admin Login'),
+                        ),
                       ),
                       const SizedBox(
                         height: 25.0,
                       ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          Logo(Logos.facebook_f),
-                          Logo(Logos.twitter),
-                          Logo(Logos.google),
-                          Logo(Logos.apple),
-                        ],
-                      ),
-                      const SizedBox(
-                        height: 25.0,
-                      ),
+                      // Row(
+                      //   mainAxisAlignment: MainAxisAlignment.center,
+                      //   children: [
+                      //     Expanded(
+                      //       child: Divider(
+                      //         thickness: 0.7,
+                      //         color: Colors.grey.withOpacity(0.5),
+                      //       ),
+                      //     ),
+                      //     const Padding(
+                      //       padding: EdgeInsets.symmetric(
+                      //         vertical: 0,
+                      //         horizontal: 10,
+                      //       ),
+                      //       child: Text(
+                      //         'Sign up with',
+                      //         style: TextStyle(
+                      //           color: Colors.black45,
+                      //         ),
+                      //       ),
+                      //     ),
+                      //     Expanded(
+                      //       child: Divider(
+                      //         thickness: 0.7,
+                      //         color: Colors.grey.withOpacity(0.5),
+                      //       ),
+                      //     ),
+                      //   ],
+                      // ),
+                      // const SizedBox(
+                      //   height: 25.0,
+                      // ),
+                      // Row(
+                      //   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      //   children: [
+                      //     Logo(Logos.facebook_f),
+                      //     Logo(Logos.twitter),
+                      //     Logo(Logos.google),
+                      //     Logo(Logos.apple),
+                      //   ],
+                      // ),
+                      // const SizedBox(
+                      //   height: 25.0,
+                      // ),
                       // don't have an account
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
