@@ -4,6 +4,14 @@ import 'package:login_signup/screens/signin_screen.dart';
 import 'package:login_signup/theme/theme.dart';
 import 'package:login_signup/widgets/custom_scaffold.dart';
 
+import '../api_service.dart';
+
+// add controllers at top of _SignUpScreenState
+final nameController = TextEditingController();
+final emailController = TextEditingController();
+final passwordController = TextEditingController();
+final roleController = TextEditingController();
+
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
 
@@ -57,6 +65,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                       // full name
                       TextFormField(
+                        controller: nameController,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Please enter Full name';
@@ -88,6 +97,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                       // email
                       TextFormField(
+                        controller: emailController,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Please enter Email';
@@ -119,6 +129,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                       // password
                       TextFormField(
+                        controller: passwordController,
                         obscureText: true,
                         obscuringCharacter: '*',
                         validator: (value) {
@@ -130,6 +141,38 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         decoration: InputDecoration(
                           label: const Text('Password'),
                           hintText: 'Enter Password',
+                          hintStyle: const TextStyle(
+                            color: Colors.black26,
+                          ),
+                          border: OutlineInputBorder(
+                            borderSide: const BorderSide(
+                              color: Colors.black12, // Default border color
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: const BorderSide(
+                              color: Colors.black12, // Default border color
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(
+                        height: 25.0,
+                      ),
+                      //Role
+                      TextFormField(
+                        controller: roleController,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter Role';
+                          }
+                          return null;
+                        },
+                        decoration: InputDecoration(
+                          label: const Text('Role'),
+                          hintText: 'Enter Role',
                           hintStyle: const TextStyle(
                             color: Colors.black26,
                           ),
@@ -184,22 +227,56 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () {
-                            if (_formSignupKey.currentState!.validate() &&
-                                agreePersonalData) {
+                          onPressed: () async {
+                            if (_formSignupKey.currentState!.validate() && agreePersonalData) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Processing Data'),
-                                ),
+                                const SnackBar(content: Text('Registering...')),
                               );
+
+                              try {
+                                final response = await ApiService.register(
+                                  nameController.text,
+                                  emailController.text,
+                                  passwordController.text,
+                                  roleController.text,
+                                );
+
+                                if (response["success"] == true) {
+                                  final data = response["data"];
+                                  if (data.containsKey("access_token")) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text("Registration Successful!")),
+                                    );
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (e) => const SignInScreen()),
+                                    );
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text("No token received")),
+                                    );
+                                  }
+
+                                } else {
+                                  final errorMsg = response["error"] ?? "Something went wrong!";
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text("Error: $errorMsg")),
+                                  );
+                                }
+
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text("Something went wrong: $e")),
+                                );
+                              }
+
                             } else if (!agreePersonalData) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text(
-                                        'Please agree to the processing of personal data')),
+                                const SnackBar(content: Text('Please agree to personal data processing')),
                               );
                             }
                           },
+
                           child: const Text('Sign up'),
                         ),
                       ),

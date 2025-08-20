@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:icons_plus/icons_plus.dart';
+// import 'package:icons_plus/icons_plus.dart';
 import 'package:login_signup/screens/admin_page.dart';
 import 'package:login_signup/screens/signup_screen.dart';
 import 'package:login_signup/widgets/custom_scaffold.dart';
 import 'package:login_signup/screens/home_page.dart';
-import 'package:login_signup/screens/admin_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+// import 'package:login_signup/screens/admin_page.dart';
 
+import '../api_service.dart';
 import '../theme/theme.dart';
+
+final TextEditingController emailController = TextEditingController();
+final TextEditingController passwordController = TextEditingController();
+
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -57,13 +63,15 @@ class _SignInScreenState extends State<SignInScreen> {
                       const SizedBox(
                         height: 40.0,
                       ),
+                      //Email
                       TextFormField(
-                        // validator: (value) {
-                        //   if (value == null || value.isEmpty) {
-                        //     return 'Please enter Email';
-                        //   }
-                        //   return null;
-                        // },
+                        controller: emailController,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter Email';
+                          }
+                          return null;
+                        },
                         decoration: InputDecoration(
                           label: const Text('Email'),
                           hintText: 'Enter Email',
@@ -87,15 +95,17 @@ class _SignInScreenState extends State<SignInScreen> {
                       const SizedBox(
                         height: 25.0,
                       ),
+                      // Password
                       TextFormField(
-                        // obscureText: true,
-                        // obscuringCharacter: '*',
-                        // validator: (value) {
-                        //   if (value == null || value.isEmpty) {
-                        //     return 'Please enter Password';
-                        //   }
-                        //   return null;
-                        // },
+                        controller: passwordController,
+                        obscureText: true,
+                        obscuringCharacter: '*',
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter Password';
+                          }
+                          return null;
+                        },
                         decoration: InputDecoration(
                           label: const Text('Password'),
                           hintText: 'Enter Password',
@@ -158,20 +168,44 @@ class _SignInScreenState extends State<SignInScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () {
+                          onPressed: () async {
                             if (_formSignInKey.currentState!.validate() && rememberPassword) {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(builder: (context) => HomePage()),
-                              );
-                            } else if (!rememberPassword) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Please agree to the processing of personal data'),
-                                ),
-                              );
+                              try {
+                                final response = await ApiService.login(
+                                  emailController.text,
+                                  passwordController.text,
+                                );
+
+                                if (response["success"] == true) {
+                                  final data = response["data"];
+                                  if (data.containsKey("access_token")) {
+                                    final prefs = await SharedPreferences.getInstance();
+                                    await prefs.setString("access_token", data["access_token"]);
+                                    await prefs.setString("role", data["role"]);
+
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text("Login Successful!")),
+                                    );
+                                    Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => HomePage()),
+                                    );
+                                  }
+
+                                } else {
+                                  final errorMsg = response["error"] ?? "Invalid credentials!";
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text("Error: $errorMsg")),
+                                  );
+                                }
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text("Something went wrong: $e")),
+                                );
+                              }
                             }
                           },
+
                           child: const Text('Sign in'),
                         ),
                       ),

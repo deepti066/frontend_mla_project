@@ -215,7 +215,7 @@ class _CreatePostFormState extends State<CreatePostForm> {
             child: Container(
               height: 52,
               decoration: BoxDecoration(
-                color: Colors.black,
+                color: Colors.blueAccent,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
@@ -249,6 +249,7 @@ class _CreatePostFormState extends State<CreatePostForm> {
     );
   }
 }
+
 
 class PostList extends StatelessWidget {
   final List<Post> posts;
