@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:login_signup/screens/postdetailpage.dart';
+import 'package:login_signup/screens/welcome_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 class HomePage extends StatelessWidget {
@@ -35,10 +37,28 @@ class HomePage extends StatelessWidget {
   final List<PageController> _controllers =
   List.generate(10, (_) => PageController());
 
+  Future<void> _logout(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove("role"); // ✅ remove saved role
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+          (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Picture Feed")),
+      appBar: AppBar(
+        title: const Text("Picture Feed"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => _logout(context), // ✅ Logout button
+          ),
+        ],
+      ),
       body: ListView.builder(
         padding: const EdgeInsets.all(12),
         itemCount: posts.length,
@@ -81,7 +101,7 @@ class HomePage extends StatelessWidget {
                             top: Radius.circular(15),
                           ),
                           child: Image.asset(
-                            images[imgIndex]['url']!, // ✅ FIXED
+                            images[imgIndex]['url']!,
                             width: double.infinity,
                             height: 200,
                             fit: BoxFit.cover,

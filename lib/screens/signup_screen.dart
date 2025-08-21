@@ -10,6 +10,7 @@ import '../api_service.dart';
 final nameController = TextEditingController();
 final emailController = TextEditingController();
 final passwordController = TextEditingController();
+final TextEditingController confirmPasswordController = TextEditingController();
 final roleController = TextEditingController();
 
 class SignUpScreen extends StatefulWidget {
@@ -22,6 +23,8 @@ class SignUpScreen extends StatefulWidget {
 class _SignUpScreenState extends State<SignUpScreen> {
   final _formSignupKey = GlobalKey<FormState>();
   bool agreePersonalData = true;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   @override
   Widget build(BuildContext context) {
     return CustomScaffold(
@@ -130,36 +133,56 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       // password
                       TextFormField(
                         controller: passwordController,
-                        obscureText: true,
-                        obscuringCharacter: '*',
+                        obscureText: _obscurePassword,
+                        decoration: InputDecoration(
+                          labelText: "Password",
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
+                          ),
+                        ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Please enter Password';
+                            return "Please enter a password";
                           }
                           return null;
                         },
+                      ),
+
+                      const SizedBox(height: 16),
+
+// Confirm Password field
+                      TextFormField(
+                        controller: confirmPasswordController,
+                        obscureText: _obscureConfirmPassword,
                         decoration: InputDecoration(
-                          label: const Text('Password'),
-                          hintText: 'Enter Password',
-                          hintStyle: const TextStyle(
-                            color: Colors.black26,
-                          ),
-                          border: OutlineInputBorder(
-                            borderSide: const BorderSide(
-                              color: Colors.black12, // Default border color
+                          labelText: "Confirm Password",
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
                             ),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(
-                              color: Colors.black12, // Default border color
-                            ),
-                            borderRadius: BorderRadius.circular(10),
+                            onPressed: () {
+                              setState(() {
+                                _obscureConfirmPassword = !_obscureConfirmPassword;
+                              });
+                            },
                           ),
                         ),
-                      ),
-                      const SizedBox(
-                        height: 25.0,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return "Please confirm your password";
+                          }
+                          if (value != passwordController.text) {
+                            return "Passwords do not match";
+                          }
+                          return null;
+                        },
                       ),
                       //Role
                       TextFormField(

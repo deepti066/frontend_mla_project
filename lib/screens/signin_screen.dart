@@ -24,6 +24,7 @@ class SignInScreen extends StatefulWidget {
 class _SignInScreenState extends State<SignInScreen> {
   final _formSignInKey = GlobalKey<FormState>();
   bool rememberPassword = true;
+  bool _obscurePassword = true;
   @override
   Widget build(BuildContext context) {
     return CustomScaffold(
@@ -98,7 +99,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       // Password
                       TextFormField(
                         controller: passwordController,
-                        obscureText: true,
+                        obscureText: _obscurePassword, // 👈 Controlled by state
                         obscuringCharacter: '*',
                         validator: (value) {
                           if (value == null || value.isEmpty) {
@@ -114,15 +115,25 @@ class _SignInScreenState extends State<SignInScreen> {
                           ),
                           border: OutlineInputBorder(
                             borderSide: const BorderSide(
-                              color: Colors.black12, // Default border color
+                              color: Colors.black12,
                             ),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderSide: const BorderSide(
-                              color: Colors.black12, // Default border color
+                              color: Colors.black12,
                             ),
                             borderRadius: BorderRadius.circular(10),
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword; // 👈 Toggle visibility
+                              });
+                            },
                           ),
                         ),
                       ),
@@ -182,18 +193,21 @@ class _SignInScreenState extends State<SignInScreen> {
                                     final prefs = await SharedPreferences.getInstance();
                                     await prefs.setString("access_token", data["access_token"]);
                                     await prefs.setString("role", data["role"]);
+                                    await prefs.setBool("isLoggedIn", true);
 
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(content: Text("Login Successful!")),
                                     );
+
                                     Navigator.pushReplacement(
                                       context,
                                       MaterialPageRoute(builder: (context) => HomePage()),
                                     );
                                   }
 
+
                                 } else {
-                                  final errorMsg = response["error"] ?? "Invalid credentials!";
+                                  final errorMsg = response["error"] ?? "Either password or email is wrong";
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(content: Text("Error: $errorMsg")),
                                   );
