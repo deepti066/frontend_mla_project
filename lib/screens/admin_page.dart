@@ -1,8 +1,12 @@
 // lib/screens/admin_page.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'package:login_signup/screens/welcome_screen.dart';
+import 'package:login_signup/screens/post_list.dart';
+
 
 class Post {
   final String title;
@@ -36,7 +40,9 @@ class _AdminPageState extends State<AdminPage> {
       _posts.insert(0, post); // newest at top
       _selectedIndex = 0; // go to feed automatically
     });
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Post added')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Post added')),
+    );
   }
 
   void _confirmDelete(int index) {
@@ -59,6 +65,17 @@ class _AdminPageState extends State<AdminPage> {
     );
   }
 
+  Future<void> _logout(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove("role");
+    await prefs.remove("token");
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+          (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final titles = ['Picture Feed', 'Create Post'];
@@ -71,6 +88,12 @@ class _AdminPageState extends State<AdminPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: Colors.black,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.red),
+            onPressed: () => _logout(context),
+          ),
+        ],
       ),
       body: SafeArea(
         child: AnimatedSwitcher(
@@ -116,75 +139,98 @@ class _CreatePostFormState extends State<CreatePostForm> {
   final _descController = TextEditingController();
   final _locationController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
-  XFile? _pickedImage;
+  List<XFile> _pickedImages = []; // multiple images
+  bool _isPosting = false;
 
-  @override
-  void initState() {
-    super.initState();
-    if (widget.initial != null) {
-      _titleController.text = widget.initial!.title;
-      _descController.text = widget.initial!.description;
-      _locationController.text = widget.initial!.location;
-      // initial image is File -> not loaded to XFile here. Keep simple for now.
-    }
-  }
-
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _descController.dispose();
-    _locationController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _pickImage() async {
-    final XFile? picked = await _picker.pickImage(
-      source: ImageSource.gallery,
+  Future<void> _pickImages() async {
+    final List<XFile> picked = await _picker.pickMultiImage(
       maxWidth: 1600,
       maxHeight: 1200,
       imageQuality: 80,
     );
-    if (picked != null) {
-      setState(() => _pickedImage = picked);
+    if (picked.isNotEmpty) {
+      setState(() => _pickedImages = picked);
     }
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final title = _titleController.text.trim();
     final desc = _descController.text.trim();
     final location = _locationController.text.trim();
 
     if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter title')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter title')),
+      );
       return;
     }
 
-    final post = Post(
-      title: title,
-      description: desc,
-      location: location,
-      imageFile: _pickedImage != null ? File(_pickedImage!.path) : null,
-    );
+    setState(() => _isPosting = true);
 
-    widget.onCreate(post);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
 
-    // clear form
-    _titleController.clear();
-    _descController.clear();
-    _locationController.clear();
-    setState(() => _pickedImage = null);
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse("http://10.0.2.2:8000/api/posts"),
+      );
+
+      request.headers['Authorization'] = "Bearer $token";
+      request.fields['title'] = title;
+      request.fields['description'] = desc;
+      request.fields['location'] = location;
+      // Attach multiple images
+      for (var img in _pickedImages) {
+        request.files.add(
+          await http.MultipartFile.fromPath("media[]", img.path),
+        );
+      }
+
+      var response = await request.send();
+
+      if (response.statusCode == 201) {
+        widget.onCreate(Post(
+          title: title,
+          description: desc,
+          location: location,
+          imageFile: _pickedImages.isNotEmpty ? File(_pickedImages.first.path) : null,
+        ));
+
+        _titleController.clear();
+        _descController.clear();
+        _locationController.clear();
+        setState(() => _pickedImages = []);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Post uploaded successfully')),
+        );
+      } else {
+        final errorText = await response.stream.bytesToString();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed: ${response.statusCode}\n$errorText")),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
+    } finally {
+      setState(() => _isPosting = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      key: widget.key,
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('Create New Post', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
+
+          // Title
           TextField(
             controller: _titleController,
             decoration: InputDecoration(
@@ -193,25 +239,31 @@ class _CreatePostFormState extends State<CreatePostForm> {
             ),
           ),
           const SizedBox(height: 12),
+
+          // Description
           TextField(
             controller: _descController,
             maxLines: 3,
             decoration: InputDecoration(
-              labelText: 'Description (optional)',
+              labelText: 'Description',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
           const SizedBox(height: 12),
+
+          // Location
           TextField(
             controller: _locationController,
             decoration: InputDecoration(
-              labelText: 'Location (optional)',
+              labelText: 'Location',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
           const SizedBox(height: 12),
+
+          // Pick images button
           GestureDetector(
-            onTap: _pickImage,
+            onTap: _pickImages,
             child: Container(
               height: 52,
               decoration: BoxDecoration(
@@ -223,101 +275,54 @@ class _CreatePostFormState extends State<CreatePostForm> {
                 children: [
                   const Icon(Icons.image, color: Colors.white),
                   const SizedBox(width: 8),
-                  Text(_pickedImage == null ? 'Pick Image' : 'Change Image', style: const TextStyle(color: Colors.white)),
+                  Text(
+                    _pickedImages.isEmpty ? 'Choose Images' : 'Change Images',
+                    style: const TextStyle(color: Colors.white),
+                  ),
                 ],
               ),
             ),
           ),
+
           const SizedBox(height: 12),
-          if (_pickedImage != null)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.file(File(_pickedImage!.path), height: 200, width: double.infinity, fit: BoxFit.cover),
+
+          // Preview selected images
+          if (_pickedImages.isNotEmpty)
+            SizedBox(
+              height: 120,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _pickedImages.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.file(
+                      File(_pickedImages[index].path),
+                      height: 120,
+                      width: 120,
+                      fit: BoxFit.cover,
+                    ),
+                  );
+                },
+              ),
             ),
+
           const SizedBox(height: 12),
+
           ElevatedButton(
-            onPressed: _submit,
+            onPressed: _isPosting ? null : _submit,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.purple,
+              backgroundColor: Colors.yellow,
               minimumSize: const Size(double.infinity, 48),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('Post'),
+            child: _isPosting
+                ? const CircularProgressIndicator(color: Colors.white)
+                : const Text('Post'),
           ),
         ],
       ),
-    );
-  }
-}
-
-
-class PostList extends StatelessWidget {
-  final List<Post> posts;
-  final void Function(int) onDelete;
-
-  const PostList({Key? key, required this.posts, required this.onDelete}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    if (posts.isEmpty) {
-      return const Center(child: Padding(
-        padding: EdgeInsets.all(20),
-        child: Text('No posts yet. Tap "Post" to add one.', style: TextStyle(fontSize: 16)),
-      ));
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: posts.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final post = posts[index];
-
-        return Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 4))],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // image (file or placeholder)
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                child: post.imageFile != null
-                    ? Image.file(post.imageFile!, height: 200, width: double.infinity, fit: BoxFit.cover)
-                    : Container(
-                  height: 200,
-                  color: Colors.grey[200],
-                  alignment: Alignment.center,
-                  child: const Icon(Icons.image, size: 64, color: Colors.grey),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        post.title,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () {
-                        // Simple delete flow
-                        onDelete(index);
-                      },
-                      icon: const Icon(Icons.delete, size: 20, color: Colors.red),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }

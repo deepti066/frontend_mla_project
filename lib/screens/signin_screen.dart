@@ -131,7 +131,7 @@ class _SignInScreenState extends State<SignInScreen> {
                             ),
                             onPressed: () {
                               setState(() {
-                                _obscurePassword = !_obscurePassword; // 👈 Toggle visibility
+                                _obscurePassword = !_obscurePassword;
                               });
                             },
                           ),
@@ -181,33 +181,48 @@ class _SignInScreenState extends State<SignInScreen> {
                         child: ElevatedButton(
                           onPressed: () async {
                             if (_formSignInKey.currentState!.validate() && rememberPassword) {
-                              try {
-                                final response = await ApiService.login(
-                                  emailController.text,
-                                  passwordController.text,
+                              final email = emailController.text.trim();
+                              final password = passwordController.text.trim();
+
+                              if (email == "admin@gmail.com" && password == "admin123") {
+                                final prefs = await SharedPreferences.getInstance();
+                                await prefs.setBool("isLoggedIn", true);
+                                await prefs.setString("role", "admin");
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text("Admin Login Successful!")),
                                 );
+
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const AdminPage()),
+                                );
+                                return;
+                              }
+
+                              // 👇 Normal User Login
+                              try {
+                                final response = await ApiService.login(email, password);
 
                                 if (response["success"] == true) {
                                   final data = response["data"];
                                   if (data.containsKey("access_token")) {
                                     final prefs = await SharedPreferences.getInstance();
                                     await prefs.setString("access_token", data["access_token"]);
-                                    await prefs.setString("role", data["role"]);
                                     await prefs.setBool("isLoggedIn", true);
+                                    await prefs.setString("role", "follower");
 
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text("Login Successful!")),
+                                      const SnackBar(content: Text("User Login Successful!")),
                                     );
 
                                     Navigator.pushReplacement(
                                       context,
-                                      MaterialPageRoute(builder: (context) => HomePage()),
+                                      MaterialPageRoute(builder: (context) => const HomePage()),
                                     );
                                   }
-
-
                                 } else {
-                                  final errorMsg = response["error"] ?? "Either password or email is wrong";
+                                  final errorMsg = response["error"] ?? "Invalid email or password";
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(content: Text("Error: $errorMsg")),
                                   );
@@ -219,37 +234,37 @@ class _SignInScreenState extends State<SignInScreen> {
                               }
                             }
                           },
-
                           child: const Text('Sign in'),
                         ),
                       ),
+
                       const SizedBox(
                         height: 25.0,
                       ),
-                      // Admin Button
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            if (_formSignInKey.currentState!.validate() && rememberPassword) {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(builder: (context) =>const AdminPage()),
-                              );
-                            } else if (!rememberPassword) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Please agree to the processing of personal data'),
-                                ),
-                              );
-                            }
-                          },
-                          child: const Text('Admin Login'),
-                        ),
-                      ),
-                      const SizedBox(
-                        height: 25.0,
-                      ),
+                      // // Admin Button
+                      // SizedBox(
+                      //   width: double.infinity,
+                      //   child: ElevatedButton(
+                      //     onPressed: () {
+                      //       if (_formSignInKey.currentState!.validate() && rememberPassword) {
+                      //         Navigator.pushReplacement(
+                      //           context,
+                      //           MaterialPageRoute(builder: (context) =>const AdminPage()),
+                      //         );
+                      //       } else if (!rememberPassword) {
+                      //         ScaffoldMessenger.of(context).showSnackBar(
+                      //           const SnackBar(
+                      //             content: Text('Please agree to the processing of personal data'),
+                      //           ),
+                      //         );
+                      //       }
+                      //     },
+                      //     child: const Text('Admin Login'),
+                      //   ),
+                      // ),
+                      // const SizedBox(
+                      //   height: 25.0,
+                      // ),
                       // Row(
                       //   mainAxisAlignment: MainAxisAlignment.center,
                       //   children: [

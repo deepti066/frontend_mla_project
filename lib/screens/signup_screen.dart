@@ -157,7 +157,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                       const SizedBox(height: 16),
 
-// Confirm Password field
+                      // Confirm Password field
                       TextFormField(
                         controller: confirmPasswordController,
                         obscureText: _obscureConfirmPassword,
